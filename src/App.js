@@ -4,6 +4,7 @@ import {
   useSupabaseClient,
   useSessionContext,
 } from "@supabase/auth-helpers-react";
+import * as Msal from 'msal';
 import { Agenda, Login } from '@microsoft/mgt-react';
 import { Providers, ProviderState } from '@microsoft/mgt-element';
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -13,60 +14,70 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import DateTimePicker from "react-datetime-picker";
 import 'react-datetime-picker/dist/DateTimePicker.css';
 import { useState, useEffect } from "react";
-import MicrosoftAuthComponent from './MicrosoftSignIn'
 
 function App() {
   const [start, setStart] = useState(new Date());
   const [end, setEnd] = useState(new Date());
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
-  const [isSignedIn] = useIsSignedIn();
+  // const [isSignedIn] = useIsSignedIn();
 
   const session = useSession(); // tokens, when session exists we have a user
   const supabase = useSupabaseClient(); // talk to supabase!
   const { isLoading } = useSessionContext();
-
-  useEffect(()=>{
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    console.log('Code:', code)
-  }, [window.location.search] )
 
   if (isLoading) {
     return <></>;
   }
 
   // Initialize the Graph client
-  const graphClient = Client.init({
-    authProvider: (done) => {
-      // Implement your authentication logic here
-      // Use MSAL or any other library to obtain an access token
-      const accessToken = 'YOUR_ACCESS_TOKEN';
-      done(null, accessToken);
+  const msalConfig = {
+    auth: {
+      clientId: '72a676c1-2c77-4f07-ad57-417b17e33305',
+      authority: 'https://login.microsoftonline.com/deabab6c-14e3-4d8b-95c3-94dae6f4c432',
+      redirectUri: 'http://localhost:3000',
     },
-  });
+    cache: {
+      cacheLocation: 'localStorage',
+      storeAuthStateInCookie: true,
+    },
+  };
+  
+  const myMSALObj = new Msal.UserAgentApplication(msalConfig);
+  
+  myMSALObj.loginPopup()
+    .then(response => {
+      const accessToken = response.accessToken;
+      console.log('Access token:', accessToken);
+      console.log(response);
+  
+      // Use the access token to make requests to Microsoft Graph API
+      // For example, update a user's calendar event
+    })
+    .catch(error => {
+      console.error('Error during login:', error);
+    });
+  
 
- 
-
-  function useIsSignedIn() {
-    const [isSignedIn, setIsSignedIn] = useState(false);
+  // function useIsSignedIn() {
+  //   const [isSignedIn, setIsSignedIn] = useState(false);
   
-    useEffect(() => {
-      const updateState = () => {
-        const provider = Providers.globalProvider;
-        setIsSignedIn(provider && provider.state === ProviderState.SignedIn);
-      };
+  //   useEffect(() => {
+  //     const updateState = () => {
+  //       const provider = Providers.globalProvider;
+  //       setIsSignedIn(provider && provider.state === ProviderState.SignedIn);
+  //     };
   
-      Providers.onProviderUpdated(updateState);
-      updateState();
+  //     Providers.onProviderUpdated(updateState);
+  //     updateState();
   
-      return () => {
-        Providers.removeProviderUpdatedListener(updateState);
-      }
-    }, []);
+  //     return () => {
+  //       Providers.removeProviderUpdatedListener(updateState);
+  //     }
+  //   }, []);
   
-    return [isSignedIn];
-  }
+  //   return [isSignedIn];
+  // }
 
   async function googleSignIn() {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -125,8 +136,7 @@ function App() {
   return (
     <div className="App">
       <div style={{ width: "400px", margin: "30px auto" }}>
-        <Login />
-        {/* <MicrosoftAuthComponent/> */}
+        {/* <Login /> */}
         {session ? (
           <>
             <h2>Hey there {session.user.email}</h2>
@@ -170,8 +180,8 @@ function App() {
         )}
         <div className="row">
           <div className="column">
-            {isSignedIn &&
-              <Agenda />}
+            {/* {isSignedIn &&
+              <Agenda />} */}
           </div>
         </div>
       </div>
