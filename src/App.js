@@ -13,6 +13,7 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import DateTimePicker from "react-datetime-picker";
 import 'react-datetime-picker/dist/DateTimePicker.css';
 import { useState, useEffect } from "react";
+import MicrosoftAuthComponent from './MicrosoftSignIn'
 
 function App() {
   const [start, setStart] = useState(new Date());
@@ -24,6 +25,12 @@ function App() {
   const session = useSession(); // tokens, when session exists we have a user
   const supabase = useSupabaseClient(); // talk to supabase!
   const { isLoading } = useSessionContext();
+
+  useEffect(()=>{
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    console.log('Code:', code)
+  }, [window.location.search] )
 
   if (isLoading) {
     return <></>;
@@ -38,6 +45,8 @@ function App() {
       done(null, accessToken);
     },
   });
+
+ 
 
   function useIsSignedIn() {
     const [isSignedIn, setIsSignedIn] = useState(false);
@@ -117,6 +126,7 @@ function App() {
     <div className="App">
       <div style={{ width: "400px", margin: "30px auto" }}>
         <Login />
+        {/* <MicrosoftAuthComponent/> */}
         {session ? (
           <>
             <h2>Hey there {session.user.email}</h2>
