@@ -7,6 +7,7 @@ import { Providers } from "@microsoft/mgt-element";
 import { Msal2Provider } from "@microsoft/mgt-msal2-provider";
 import { createClient } from "@supabase/supabase-js";
 import { SessionContextProvider } from "@supabase/auth-helpers-react";
+import CustomMsalProvider from "./msal-provider";
 
 Providers.globalProvider = new Msal2Provider({
   clientId: "72a676c1-2c77-4f07-ad57-417b17e33305",
@@ -21,9 +22,11 @@ const supabase = createClient(
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <SessionContextProvider supabaseClient={supabase}>
-      <App />
-    </SessionContextProvider>
+    <CustomMsalProvider>
+      <SessionContextProvider supabaseClient={supabase}>
+        <App />
+      </SessionContextProvider>
+    </CustomMsalProvider>
   </React.StrictMode>
 );
 

@@ -14,6 +14,7 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import DateTimePicker from "react-datetime-picker";
 import 'react-datetime-picker/dist/DateTimePicker.css';
 import { useState, useEffect } from "react";
+import LoginContainer from "./login";
 
 function App() {
   const [start, setStart] = useState(new Date());
@@ -42,40 +43,40 @@ function App() {
       storeAuthStateInCookie: true,
     },
   };
-  
+
   const myMSALObj = new Msal.UserAgentApplication(msalConfig);
-  
+
   myMSALObj.loginPopup()
     .then(response => {
       const accessToken = response.accessToken;
       console.log('Access token:', accessToken);
       console.log(response);
-  
+
       // Use the access token to make requests to Microsoft Graph API
       // For example, update a user's calendar event
     })
     .catch(error => {
       console.error('Error during login:', error);
     });
-  
+
 
   // function useIsSignedIn() {
   //   const [isSignedIn, setIsSignedIn] = useState(false);
-  
+
   //   useEffect(() => {
   //     const updateState = () => {
   //       const provider = Providers.globalProvider;
   //       setIsSignedIn(provider && provider.state === ProviderState.SignedIn);
   //     };
-  
+
   //     Providers.onProviderUpdated(updateState);
   //     updateState();
-  
+
   //     return () => {
   //       Providers.removeProviderUpdatedListener(updateState);
   //     }
   //   }, []);
-  
+
   //   return [isSignedIn];
   // }
 
@@ -137,6 +138,7 @@ function App() {
     <div className="App">
       <div style={{ width: "400px", margin: "30px auto" }}>
         {/* <Login /> */}
+        <LoginContainer />
         {session ? (
           <>
             <h2>Hey there {session.user.email}</h2>
