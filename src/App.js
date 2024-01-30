@@ -1,21 +1,25 @@
-import logo from "./logo.svg";
 import "./App.css";
 import {
   useSession,
   useSupabaseClient,
   useSessionContext,
 } from "@supabase/auth-helpers-react";
+import { Agenda, Login } from '@microsoft/mgt-react';
+import { Providers, ProviderState } from '@microsoft/mgt-element';
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { Client } from '@microsoft/microsoft-graph-client';
 import DateTimePicker from "react-datetime-picker";
-import { useState } from "react";
+import 'react-datetime-picker/dist/DateTimePicker.css';
+import { useState, useEffect } from "react";
 
 function App() {
   const [start, setStart] = useState(new Date());
   const [end, setEnd] = useState(new Date());
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
+  const [isSignedIn] = useIsSignedIn();
 
   const session = useSession(); // tokens, when session exists we have a user
   const supabase = useSupabaseClient(); // talk to supabase!
@@ -23,6 +27,36 @@ function App() {
 
   if (isLoading) {
     return <></>;
+  }
+
+  // Initialize the Graph client
+  const graphClient = Client.init({
+    authProvider: (done) => {
+      // Implement your authentication logic here
+      // Use MSAL or any other library to obtain an access token
+      const accessToken = 'YOUR_ACCESS_TOKEN';
+      done(null, accessToken);
+    },
+  });
+
+  function useIsSignedIn() {
+    const [isSignedIn, setIsSignedIn] = useState(false);
+  
+    useEffect(() => {
+      const updateState = () => {
+        const provider = Providers.globalProvider;
+        setIsSignedIn(provider && provider.state === ProviderState.SignedIn);
+      };
+  
+      Providers.onProviderUpdated(updateState);
+      updateState();
+  
+      return () => {
+        Providers.removeProviderUpdatedListener(updateState);
+      }
+    }, []);
+  
+    return [isSignedIn];
   }
 
   async function googleSignIn() {
@@ -82,6 +116,7 @@ function App() {
   return (
     <div className="App">
       <div style={{ width: "400px", margin: "30px auto" }}>
+        <Login />
         {session ? (
           <>
             <h2>Hey there {session.user.email}</h2>
@@ -123,60 +158,15 @@ function App() {
             <button onClick={() => googleSignIn()}>Sign In With Google</button>
           </>
         )}
+        <div className="row">
+          <div className="column">
+            {isSignedIn &&
+              <Agenda />}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 export default App;
-
-// const [events, setEvents] = useState([]);
-
-// const calendarID = "sahil.arifi2006@gmail.com";
-// const apiKey = "AIzaSyCMpTYfylzghT5HwPIqvmkY-Mn03Q5GTKM";
-// const accessToken =
-//   "ya29.a0AfB_byCwkLUhgrAHUTRDKrc3Zf5_VM6veCQFDoMUDCIibVI4ukmE9tSI0EElkMmUZLifpUTsBmqfktnOjL6DNmUbKEhzuzwtz1VWnRVPIpsFrxhgQQrm904O0xBOXNm3LHtGrVoJHBbXTD4VjT1be_Eg8fwd0qLYE6Z4aCgYKAUcSARISFQHGX2MiY_tnHvMSuIE81aAwuyfgPA0171";
-
-// const getEvents = (calendarID, apiKey) => {
-//   function initiate() {
-//     gapi.client
-//       .init({
-//         apiKey: apiKey,
-//       })
-//       .then(function () {
-//         return gapi.client.request({
-//           path: `https://www.googleapis.com/calendar/v3/calendars/${calendarID}/events`,
-//         });
-//       })
-//       .then(
-//         (response) => {
-//           let events = response.result.items;
-//           setEvents(events);
-//         },
-//         function (err) {
-//           return [false, err];
-//         }
-//       )
-//       .then(console.log(events));
-//   }
-//   gapi.load("client", initiate);
-// };
-
-// useEffect(() => {
-//   getEvents(calendarID, apiKey);
-// }, []);
-
-// return (
-//   <div className="App py-8 flex flex-col justify-center">
-//     <h1 className="text-2xl font-bold mb-4">
-//       React App with Google Calendar API!
-//       // <ul>
-//       //   {events?.map((event) => (
-//       //     <li key={event.id} className="flex justify-center">
-//       //       <Event description={event.summary} />
-//       //     </li>
-//       //   ))}
-//       // </ul>
-//     </h1>
-//   </div>
-// );

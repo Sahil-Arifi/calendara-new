@@ -3,8 +3,15 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
+import { Providers } from "@microsoft/mgt-element";
+import { Msal2Provider } from "@microsoft/mgt-msal2-provider";
 import { createClient } from "@supabase/supabase-js";
 import { SessionContextProvider } from "@supabase/auth-helpers-react";
+
+Providers.globalProvider = new Msal2Provider({
+  clientId: "72a676c1-2c77-4f07-ad57-417b17e33305",
+  scopes: ['calendars.read', 'user.read', 'openid', 'profile', 'people.read', 'user.readbasic.all']
+});
 
 const supabase = createClient(
   "https://lvhzrguxehlcogmzzgff.supabase.co",
