@@ -2,7 +2,6 @@ import axios from 'axios';
 import { loginRequest } from "../auth";
 
 export const createOutlookEvent = async (accessToken, eventName, start, end) => {
-  console.log(accessToken)
   try {
     const apiUrl = 'https://graph.microsoft.com/v1.0/me/events';
 
@@ -78,8 +77,6 @@ export const deleteOutlookEvent = async (accessToken, eventId) => {
 }
 
 export async function createGoogleEvent({ session, start, end, eventName, eventDescription }) {
-  console.log("Creating calendar event");
-  console.log(session.provider_token)
   const event = {
     summary: eventName,
     description: eventDescription,
@@ -106,7 +103,6 @@ export async function createGoogleEvent({ session, start, end, eventName, eventD
       return data.json();
     })
     .then((data) => {
-      console.log(data);
       alert("Event created, check your Google Calendar!");
     });
 }
@@ -120,21 +116,19 @@ export const getAllGoogleEvents = async (googleAccessToken) => {
         Authorization: `Bearer ${googleAccessToken}`,
       },
     });
-    console.log("getAllEvents Token: " + response)
-
-    return response.data.summary;
+    return response.data.items;
   } catch (error) {
     console.error('Error getting events:', error.response ? error.response.data : error.message);
   }
 }
 
-export const deleteGoogleEvent = async ({session}, eventId) => {
+export const deleteGoogleEvent = async (googleAccessToken, eventId) => {
   try {
-    const apiUrl = `https://www.googleapis.com/calendar/v3/calendars/${eventId}/events`;
+    const apiUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`;
 
     const response = await axios.delete(apiUrl, {
       headers: {
-        Authorization: `Bearer ${session.provider_token}`,
+        Authorization: `Bearer ${googleAccessToken}`,
       },
     });
 
@@ -142,7 +136,8 @@ export const deleteGoogleEvent = async ({session}, eventId) => {
   } catch (error) {
     console.error('Error deleting event:', error.response ? error.response.data : error.message);
   }
-}
+};
+
 
 export const handleMicrosoftLogin = async (instance) => {
   await instance.loginPopup(loginRequest);
@@ -169,8 +164,6 @@ export async function googleSignIn(supabase) {
 
     // Store the Google access token in localStorage
     localStorage.setItem("googleAccessToken", googleAccessToken);
-
-    console.log("Google Access Token stored in localStorage:", googleAccessToken);
   } else {
     console.error("User is not authenticated or no Google access token available.");
   }

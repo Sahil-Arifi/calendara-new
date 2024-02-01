@@ -21,6 +21,8 @@ function App() {
   const [googleEvents, setGoogleEvents] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentEventId, setCurrentEventId] = useState("");
+  const [forceUpdate, setForceUpdate] = useState(false);
+
 
   const session = useSession(); // tokens, when session exists we have a user
   const { isLoading } = useSessionContext();
@@ -38,28 +40,21 @@ function App() {
       getAllOutlookEvents(microsoftAccessToken)
         .then(res => {
           setMicrosoftEvents(res);
-          console.log(res)
         })
     }
   }, [microsoftAccessToken]);
 
   useEffect(() => {
-    console.log("Google Access Token Updated:", googleAccessToken);
-  }, [googleAccessToken]);
-
-  useEffect(() => {
     if (googleAccessToken !== "") {
       getAllGoogleEvents(googleAccessToken)
         .then(res => {
-          setGoogleEvents(prevEvents => [...prevEvents, ...res]);
-          console.log(googleEvents);
+          setGoogleEvents(res);
         })
         .catch(error => {
-          console.error('Error getting events:', error.response ? error.response.data : error.message);
+          // Handle error
         });
     }
   }, [googleAccessToken]);
-  
 
  
 
@@ -78,6 +73,7 @@ function App() {
 
   const handleGoogleDeleteEvent = async (eventId) => {
     await deleteGoogleEvent(googleAccessToken, eventId);
+    console.log(googleAccessToken)
     // update the googleEvents state
     setGoogleEvents(googleEvents.filter(event => event.id !== eventId));
   }
@@ -111,6 +107,11 @@ function App() {
     setStart('');
     setEnd('');
   }
+
+  const handleClick = () => {
+    // Toggle the state to force a re-render
+    setForceUpdate(prevState => !prevState);
+  };
 
   if (isLoading) {
     return <>Loading...</>;
@@ -147,7 +148,6 @@ function App() {
           <hr />
           <button onClick={() => {
               setGoogleAccessToken(session.provider_token)
-              console.log("provider token:" + session.provider_token)
               createGoogleEvent({ session, start, end, eventName, eventDescription })
           }}>
             Create Google Calendar Event
@@ -166,6 +166,18 @@ function App() {
                 </div>
               )
             })
+          }
+          {googleEvents ?
+            googleEvents.map((event, index) => {
+              return (
+                <div key={index} onClick={() => handleUpdateForm(event)} style={{ border: '1px solid blue', marginBottom: '10px', padding: '10px', cursor: 'pointer' }}>
+                  <p>{event?.summary}</p>
+                  <p>{event?.start.dateTime}</p>
+                  <p>{event?.end.dateTime}</p>
+                  <button onClick={() => handleGoogleDeleteEvent(event.id)}>Cancel</button>
+                </div>
+              )
+            }) : null
           }
           <SignOut />
           </>
