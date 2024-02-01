@@ -11,8 +11,8 @@ import { createGoogleEvent, createOutlookEvent, deleteGoogleEvent, deleteOutlook
 import SignOut from "./logout";
 
 function App() {
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+  const [start, setStart] = useState(null);
+  const [end, setEnd] = useState(null);
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
   const [microsoftAccessToken, setMicrosoftAccessToken] = useState("");
@@ -21,6 +21,7 @@ function App() {
   const [googleEvents, setGoogleEvents] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentEventId, setCurrentEventId] = useState("");
+  // eslint-disable-next-line
   const [forceUpdate, setForceUpdate] = useState(false);
 
 
@@ -33,6 +34,23 @@ function App() {
       setMicrosoftAccessToken(microsoftAccessToken)
     }
   }, []);
+
+  useEffect(() => {
+    // Retrieve Google events from local storage on component mount
+    const storedGoogleEvents = localStorage.getItem("googleEvents");
+    if (storedGoogleEvents) {
+      try {
+        const parsedEvents = JSON.parse(storedGoogleEvents);
+        setGoogleEvents(parsedEvents);
+      } catch (error) {
+        console.error("Error parsing stored Google events:", error);
+        // Handle the error as needed
+      }
+    } else {
+      setGoogleEvents([]);
+    }
+  }, []);
+  
 
 
   useEffect(() => {
@@ -51,13 +69,17 @@ function App() {
           setGoogleEvents(res);
         })
         .catch(error => {
-          // Handle error
+          console.log(error)
         });
     }
   }, [googleAccessToken]);
 
  
-
+  // useEffect to perform actions after state has been updated
+  useEffect(() => {
+  // Your code to execute after googleEvents state has been updated
+  console.log("Google Events updated:", googleEvents);
+  }, [googleEvents]); // Dependency array ensures the effect runs when googleEvents changes
 
   const handleCreateEvent = async () => {
     const newEvent = await createOutlookEvent(microsoftAccessToken, eventName, start, end);
@@ -72,11 +94,49 @@ function App() {
   }
 
   const handleGoogleDeleteEvent = async (eventId) => {
-    await deleteGoogleEvent(googleAccessToken, eventId);
-    console.log(googleAccessToken)
-    // update the googleEvents state
-    setGoogleEvents(googleEvents.filter(event => event.id !== eventId));
-  }
+    try {
+      // Delete the event
+      await deleteGoogleEvent(googleAccessToken, eventId);
+  
+      // Update the local storage immediately
+      localStorage.setItem(
+        "googleEvents",
+        JSON.stringify(googleEvents.filter(event => event.id !== eventId))
+      );
+  
+      // Update the state to reflect the deletion
+      setGoogleEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
+    } catch (error) {
+      console.error("Error deleting Google event:", error);
+    }
+  };
+  
+
+  const handleCreateGoogleEvent = async () => {
+    try {
+      // Create the event
+      await createGoogleEvent({ session, start, end, eventName, eventDescription });
+  
+      // Fetch the updated events immediately
+      const updatedGoogleEvents = await getAllGoogleEvents(googleAccessToken);
+  
+      // Update the local storage with the latest events
+      localStorage.setItem("googleEvents", JSON.stringify(updatedGoogleEvents));
+  
+      // Update the state to reflect the new events
+      setGoogleEvents(updatedGoogleEvents);
+  
+      // Clear the form input values
+      setStart(null);
+      setEnd(null);
+      setEventName("");
+      setEventDescription("");
+    } catch (error) {
+      console.error("Error creating Google event:", error);
+      // Handle error gracefully, show a message, etc.
+    }
+  };
+  
 
   const handleUpdateForm = (event) => {
     setEventName(event.subject)
@@ -144,11 +204,12 @@ function App() {
             value={eventDescription}
             onChange={(e) => setEventDescription(e.target.value)}
           />
-          {isEditing ? <button onClick={() => handleEventUpdate(currentEventId)}>Update Changes</button> : null}
+          {isEditing ? <button onClick={() => handleEventUpdate(currentEventId)}>Update Changes</button> : ""}
           <hr />
           <button onClick={() => {
               setGoogleAccessToken(session.provider_token)
-              createGoogleEvent({ session, start, end, eventName, eventDescription })
+              handleCreateGoogleEvent({ session, start, end, eventName, eventDescription })
+              handleClick()
           }}>
             Create Google Calendar Event
           </button>
@@ -177,7 +238,7 @@ function App() {
                   <button onClick={() => handleGoogleDeleteEvent(event.id)}>Cancel</button>
                 </div>
               )
-            }) : null
+            }) : undefined
           }
           <SignOut />
           </>
