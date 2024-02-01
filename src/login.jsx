@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useMsal } from '@azure/msal-react';
 import { googleSignIn, handleMicrosoftLogin } from "./services";
 import {
@@ -22,8 +22,8 @@ const SignIn = () => {
       console.log('err:', err)
 
     })
+    
   }, [instance, activeAccount]);
-
 
   return (
     <div style={{display: 'flex', gap: 64}}>

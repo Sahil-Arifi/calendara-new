@@ -79,6 +79,7 @@ export const deleteOutlookEvent = async (accessToken, eventId) => {
 
 export async function createGoogleEvent({ session, start, end, eventName, eventDescription }) {
   console.log("Creating calendar event");
+  console.log(session.provider_token)
   const event = {
     summary: eventName,
     description: eventDescription,
@@ -110,8 +111,44 @@ export async function createGoogleEvent({ session, start, end, eventName, eventD
     });
 }
 
+export const getAllGoogleEvents = async ({session}) => {
+  try {
+    const apiUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+
+    const response = await axios.get(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${session.provider_token}`,
+      },
+    });
+
+    return response.data.value;
+  } catch (error) {
+    console.error('Error getting events:', error.response ? error.response.data : error.message);
+  }
+}
+
+export const deleteGoogleEvent = async ({session}, eventId) => {
+  try {
+    const apiUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`;
+
+    const response = await axios.delete(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${session.provider_token}`,
+      },
+    });
+
+    console.log('Event deleted:', response.data);
+  } catch (error) {
+    console.error('Error deleting event:', error.response ? error.response.data : error.message);
+  }
+}
+
 export const handleMicrosoftLogin = async (instance) => {
   await instance.loginPopup(loginRequest);
+}
+
+export const microsoftSignOut = async (instance) => {
+  await instance.logout();
 }
 
 export async function googleSignIn(supabase) {
@@ -119,8 +156,23 @@ export async function googleSignIn(supabase) {
     provider: "google",
     options: {
       scopes: "https://www.googleapis.com/auth/calendar",
-    },
-  });
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+  }});
+  // Check if the user is authenticated and has a provider token
+  if (supabase.session && supabase.session.provider_token) {
+    // Assuming "google" is the provider you are interested in
+    const googleAccessToken = supabase.session.provider_token;
+
+    // Store the Google access token in localStorage
+    localStorage.setItem("googleAccessToken", googleAccessToken);
+
+    console.log("Google Access Token stored in localStorage:", googleAccessToken);
+  } else {
+    console.error("User is not authenticated or no Google access token available.");
+  }
   if (error) {
     alert("Error logging in to Google provider with Supabase");
     console.log(error);
@@ -130,3 +182,4 @@ export async function googleSignIn(supabase) {
 export async function googleSignOut(supabase) {
   await supabase.auth.signOut();
 }
+

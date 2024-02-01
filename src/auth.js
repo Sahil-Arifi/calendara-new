@@ -22,6 +22,3 @@ export const loginRequest = {
 export const graphConfig = {
   graphMeEndpoint: "https://graph.microsoft-ppe.com/v1.0/me"
 };
-
-export const signInWithMicrosoft = async () => {
-}

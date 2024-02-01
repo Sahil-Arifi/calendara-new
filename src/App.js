@@ -1,21 +1,14 @@
 import "./App.css";
 import {
-  useSession,
-  useSupabaseClient,
+  useSession, 
   useSessionContext,
 } from "@supabase/auth-helpers-react";
-import * as Msal from 'msal';
-import { Agenda, Login } from '@microsoft/mgt-react';
-import { Providers, ProviderState } from '@microsoft/mgt-element';
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { Client } from '@microsoft/microsoft-graph-client';
 import DateTimePicker from "react-datetime-picker";
 import 'react-datetime-picker/dist/DateTimePicker.css';
 import { useState, useEffect } from "react";
 import SignIn from "./login";
-import { createGoogleEvent, googleSignOut, createOutlookEvent, deleteOutlookEvent, getAllOutlookEvents, updateOutlookEvent } from "./services";
+import { createGoogleEvent, createOutlookEvent, deleteGoogleEvent, deleteOutlookEvent, getAllGoogleEvents, getAllOutlookEvents, updateOutlookEvent } from "./services";
+import SignOut from "./logout";
 
 function App() {
   const [start, setStart] = useState('');
@@ -23,13 +16,13 @@ function App() {
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
   const [microsoftAccessToken, setMicrosoftAccessToken] = useState("");
+  const [googleAccessToken, setGoogleAccessToken] = useState("");
   const [microsoftEvents, setMicrosoftEvents] = useState([]);
+  const [googleEvents, setGoogleEvents] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentEventId, setCurrentEventId] = useState("");
-  // const [isSignedIn] = useIsSignedIn();
 
   const session = useSession(); // tokens, when session exists we have a user
-  const supabase = useSupabaseClient(); // talk to supabase!
   const { isLoading } = useSessionContext();
 
   useEffect(() => {
@@ -40,13 +33,32 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const googleAccessToken = localStorage.getItem("googleAccessToken")
+    if (googleAccessToken) {
+      setGoogleAccessToken(googleAccessToken)
+    }
+  }, []);
+
+  useEffect(() => {
     if (microsoftAccessToken) {
       getAllOutlookEvents(microsoftAccessToken)
         .then(res => {
-          setMicrosoftEvents(res)
+          setMicrosoftEvents(res);
         })
     }
   }, [microsoftAccessToken]);
+
+  useEffect(() => {
+    if (googleAccessToken) {
+      getAllGoogleEvents({googleAccessToken})
+        .then(res => {
+          setGoogleEvents(res)
+        })
+    }
+  }, [googleAccessToken]);
+
+ 
+
 
   const handleCreateEvent = async () => {
     const newEvent = await createOutlookEvent(microsoftAccessToken, eventName, start, end);
@@ -54,10 +66,16 @@ function App() {
   }
 
 
-  const handleDeleteEvent = async (eventId) => {
+  const handleMicrosoftDeleteEvent = async (eventId) => {
     await deleteOutlookEvent(microsoftAccessToken, eventId);
     // update the microsoftEvents state
     setMicrosoftEvents(microsoftEvents.filter(event => event.id !== eventId));
+  }
+
+  const handleGoogleDeleteEvent = async (eventId) => {
+    await deleteGoogleEvent(googleAccessToken, eventId);
+    // update the googleEvents state
+    setGoogleEvents(googleEvents.filter(event => event.id !== eventId));
   }
 
   const handleUpdateForm = (event) => {
@@ -129,8 +147,6 @@ function App() {
           <button onClick={() => handleCreateEvent()}>
             Create Outlook Calendar Event
           </button>
-          <button onClick={() => deleteOutlookEvent(microsoftAccessToken)}>delete</button>
-
           {
             microsoftEvents.map((event, index) => {
               return (
@@ -138,19 +154,15 @@ function App() {
                   <p>{event?.subject}</p>
                   <p>{event?.start.dateTime}</p>
                   <p>{event?.end.dateTime}</p>
-                  <button onClick={() => handleDeleteEvent(event.id)}>Cancel</button>
+                  <button onClick={() => handleMicrosoftDeleteEvent(event.id)}>Cancel</button>
                 </div>
               )
             })
           }
-          <button onClick={() => googleSignOut(supabase)}>Google Sign Out</button>
-          {/* <button onClick={() => microsoftSignOut(supabase)}>Microsoft Sign Out</button> */}
-        </>
-
+          <SignOut />
+          </>
         <div className="row">
           <div className="column">
-            {/* {isSignedIn &&
-              <Agenda />} */}
           </div>
         </div>
       </div>
