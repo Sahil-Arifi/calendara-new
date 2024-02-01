@@ -97,59 +97,56 @@ function App() {
   return (
     <div className="App">
       <div style={{ width: "400px", margin: "30px auto" }}>
-        {microsoftAccessToken ? (
-          <>
-            {/* <h2>Hey there {session.user.email}</h2> */}
-            <h1>Start of your event</h1>
-            <DateTimePicker
-              onChange={setStart}
-              value={start}
-              style={{ width: "30px" }}
-            />
-            <p>End of your event</p>
-            <DateTimePicker
-              onChange={setEnd}
-              value={end}
-              style={{ width: "30px" }}
-            />
-            <p>Event name</p>
-            <input type="text" value={eventName} onChange={(e) => setEventName(e.target.value)} />
-            <p>Event description</p>
-            <input
-              type="text"
-              value={eventDescription}
-              onChange={(e) => setEventDescription(e.target.value)}
-            />
-            {isEditing ? <button onClick={() => handleEventUpdate(currentEventId)}>Update Changes</button> : null}
-            <hr />
-            <button onClick={() => createGoogleEvent({ session, start, end, eventName, eventDescription })}>
-              Create Google Calendar Event
-            </button>
-            <button onClick={() => handleCreateEvent()}>
-              Create Outlook Calendar Event
-            </button>
-            <button onClick={() => deleteOutlookEvent(microsoftAccessToken)}>delete</button>
+        <SignIn />
 
-            {
-              microsoftEvents.map((event, index) => {
-                return (
-                  <div key={index} onClick={() => handleUpdateForm(event)} style={{ border: '1px solid red', marginBottom: '10px', padding: '10px', cursor: 'pointer' }}>
-                    <p>{event?.subject}</p>
-                    <p>{event?.start.dateTime}</p>
-                    <p>{event?.end.dateTime}</p>
-                    <button onClick={() => handleDeleteEvent(event.id)}>Cancel</button>
-                  </div>
-                )
-              })
-            }
-            <button onClick={() => googleSignOut(supabase)}>Google Sign Out</button>
-            {/* <button onClick={() => microsoftSignOut(supabase)}>Microsoft Sign Out</button> */}
-          </>
-        ) : (
-          <>
-            <SignIn />
-          </>
-        )}
+        <>
+          {/* <h2>Hey there {session.user.email}</h2> */}
+          <h1>Start of your event</h1>
+          <DateTimePicker
+            onChange={setStart}
+            value={start}
+            style={{ width: "30px" }}
+          />
+          <p>End of your event</p>
+          <DateTimePicker
+            onChange={setEnd}
+            value={end}
+            style={{ width: "30px" }}
+          />
+          <p>Event name</p>
+          <input type="text" value={eventName} onChange={(e) => setEventName(e.target.value)} />
+          <p>Event description</p>
+          <input
+            type="text"
+            value={eventDescription}
+            onChange={(e) => setEventDescription(e.target.value)}
+          />
+          {isEditing ? <button onClick={() => handleEventUpdate(currentEventId)}>Update Changes</button> : null}
+          <hr />
+          <button onClick={() => createGoogleEvent({ session, start, end, eventName, eventDescription })}>
+            Create Google Calendar Event
+          </button>
+          <button onClick={() => handleCreateEvent()}>
+            Create Outlook Calendar Event
+          </button>
+          <button onClick={() => deleteOutlookEvent(microsoftAccessToken)}>delete</button>
+
+          {
+            microsoftEvents.map((event, index) => {
+              return (
+                <div key={index} onClick={() => handleUpdateForm(event)} style={{ border: '1px solid red', marginBottom: '10px', padding: '10px', cursor: 'pointer' }}>
+                  <p>{event?.subject}</p>
+                  <p>{event?.start.dateTime}</p>
+                  <p>{event?.end.dateTime}</p>
+                  <button onClick={() => handleDeleteEvent(event.id)}>Cancel</button>
+                </div>
+              )
+            })
+          }
+          <button onClick={() => googleSignOut(supabase)}>Google Sign Out</button>
+          {/* <button onClick={() => microsoftSignOut(supabase)}>Microsoft Sign Out</button> */}
+        </>
+
         <div className="row">
           <div className="column">
             {/* {isSignedIn &&

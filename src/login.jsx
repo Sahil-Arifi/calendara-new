@@ -25,7 +25,7 @@ const SignIn = () => {
 
 
   return (
-    <div style={{display: 'flex', flexDirection: 'column'}}>
+    <div style={{display: 'flex', gap: 64}}>
       <button onClick={() =>handleMicrosoftLogin(instance)} >Login to Microsoft</button>
       <button onClick={() => googleSignIn(supabase)}>Sign In With Google</button>
     </div>
