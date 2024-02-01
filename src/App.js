@@ -14,134 +14,38 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import DateTimePicker from "react-datetime-picker";
 import 'react-datetime-picker/dist/DateTimePicker.css';
 import { useState, useEffect } from "react";
-import LoginContainer from "./login";
+import SignIn from "./login";
+import { createGoogleEvent, googleSignOut, createOutlookEvent } from "./services";
 
 function App() {
   const [start, setStart] = useState(new Date());
   const [end, setEnd] = useState(new Date());
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
+  const [microsoftAccessToken, setMicrosoftAccessToken] = useState("");
   // const [isSignedIn] = useIsSignedIn();
 
   const session = useSession(); // tokens, when session exists we have a user
   const supabase = useSupabaseClient(); // talk to supabase!
   const { isLoading } = useSessionContext();
 
+  useEffect(() => {
+    const microsoftAccessToken = localStorage.getItem("microsoftAccessToken")
+    if (microsoftAccessToken) {
+      setMicrosoftAccessToken(microsoftAccessToken)
+    }
+  }, []);
+
   if (isLoading) {
     return <></>;
   }
 
-  // Initialize the Graph client
-  const msalConfig = {
-    auth: {
-      clientId: '72a676c1-2c77-4f07-ad57-417b17e33305',
-      authority: 'https://login.microsoftonline.com/deabab6c-14e3-4d8b-95c3-94dae6f4c432',
-      redirectUri: 'http://localhost:3000',
-    },
-    cache: {
-      cacheLocation: 'localStorage',
-      storeAuthStateInCookie: true,
-    },
-  };
-
-  const myMSALObj = new Msal.UserAgentApplication(msalConfig);
-
-  myMSALObj.loginPopup()
-    .then(response => {
-      const accessToken = response.accessToken;
-      console.log('Access token:', accessToken);
-      console.log(response);
-
-      // Use the access token to make requests to Microsoft Graph API
-      // For example, update a user's calendar event
-    })
-    .catch(error => {
-      console.error('Error during login:', error);
-    });
-
-
-  // function useIsSignedIn() {
-  //   const [isSignedIn, setIsSignedIn] = useState(false);
-
-  //   useEffect(() => {
-  //     const updateState = () => {
-  //       const provider = Providers.globalProvider;
-  //       setIsSignedIn(provider && provider.state === ProviderState.SignedIn);
-  //     };
-
-  //     Providers.onProviderUpdated(updateState);
-  //     updateState();
-
-  //     return () => {
-  //       Providers.removeProviderUpdatedListener(updateState);
-  //     }
-  //   }, []);
-
-  //   return [isSignedIn];
-  // }
-
-  async function googleSignIn() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        scopes: "https://www.googleapis.com/auth/calendar",
-      },
-    });
-    if (error) {
-      alert("Error logging in to Google provider with Supabase");
-      console.log(error);
-    }
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
-
-  async function createCalendarEvent() {
-    console.log("Creating calendar event");
-    const event = {
-      summary: eventName,
-      description: eventDescription,
-      start: {
-        dateTime: start.toISOString(), // Date.toISOString() ->
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // America/Los_Angeles
-      },
-      end: {
-        dateTime: end.toISOString(), // Date.toISOString() ->
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // America/Los_Angeles
-      },
-    };
-    await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + session.provider_token, // Access token for google
-        },
-        body: JSON.stringify(event),
-      }
-    )
-      .then((data) => {
-        return data.json();
-      })
-      .then((data) => {
-        console.log(data);
-        alert("Event created, check your Google Calendar!");
-      });
-  }
-
-  console.log(session);
-  console.log(start);
-  console.log(eventName);
-  console.log(eventDescription);
   return (
     <div className="App">
       <div style={{ width: "400px", margin: "30px auto" }}>
-        {/* <Login /> */}
-        <LoginContainer />
-        {session ? (
+        {microsoftAccessToken ? (
           <>
-            <h2>Hey there {session.user.email}</h2>
+            {/* <h2>Hey there {session.user.email}</h2> */}
             <p>Start of your event</p>
             <LocalizationProvider
               dateAdapter={AdapterDayjs}
@@ -169,15 +73,18 @@ function App() {
               onChange={(e) => setEventDescription(e.target.value)}
             />
             <hr />
-            <button onClick={() => createCalendarEvent()}>
-              Create Calendar Event
+            <button onClick={() => createGoogleEvent({ session, start, end, eventName, eventDescription })}>
+              Create Google Calendar Event
+            </button>
+            <button onClick={() => createOutlookEvent(microsoftAccessToken, eventName, start, end,)}>
+              Create Outlook Calendar Event
             </button>
             <p></p>
-            <button onClick={() => signOut()}>Sign Out</button>
+            <button onClick={() => googleSignOut(supabase)}>Sign Out</button>
           </>
         ) : (
           <>
-            <button onClick={() => googleSignIn()}>Sign In With Google</button>
+            <SignIn />
           </>
         )}
         <div className="row">
