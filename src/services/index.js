@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { loginRequest } from "../auth";
 
 export const createOutlookEvent = async (accessToken, eventName, start, end) => {
   console.log(accessToken)
@@ -17,19 +18,7 @@ export const createOutlookEvent = async (accessToken, eventName, start, end) => 
       },
     };
 
-    const eventPayload = {
-      subject: 'Sample Event',
-      start: {
-        dateTime: '2024-01-31T08:00:00',
-        timeZone: 'UTC',
-      },
-      end: {
-        dateTime: '2024-01-31T09:00:00',
-        timeZone: 'UTC',
-      },
-    };
-
-    const response = await axios.post(apiUrl, eventPayload, {
+    const response = await axios.post(apiUrl, event, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -37,10 +26,56 @@ export const createOutlookEvent = async (accessToken, eventName, start, end) => 
     });
 
     console.log('Event created:', response.data);
+    return response.data;
   } catch (error) {
     console.error('Error creating event:', error.response ? error.response.data : error.message);
   }
 };
+
+export const getAllOutlookEvents = async (accessToken) => {
+  try {
+    const apiUrl = 'https://graph.microsoft.com/v1.0/me/events';
+
+    const response = await axios.get(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.data.value;
+  } catch (error) {
+    console.error('Error getting events:', error.response ? error.response.data : error.message);
+  }
+}
+
+export const updateOutlookEvent = async (accessToken, eventId, updatedEvent) => {
+  // updatedEvent should be an object with the properties to update
+  const apiUrl = `https://graph.microsoft.com/v1.0/me/events/${eventId}`;
+  const response = await axios.patch(apiUrl, updatedEvent, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return response.data;
+
+}
+
+export const deleteOutlookEvent = async (accessToken, eventId) => {
+  try {
+    const apiUrl = `https://graph.microsoft.com/v1.0/me/events/${eventId}`;
+
+    const response = await axios.delete(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    console.log('Event deleted:', response.data);
+  } catch (error) {
+    console.error('Error deleting event:', error.response ? error.response.data : error.message);
+  }
+}
 
 export async function createGoogleEvent({ session, start, end, eventName, eventDescription }) {
   console.log("Creating calendar event");
@@ -73,6 +108,10 @@ export async function createGoogleEvent({ session, start, end, eventName, eventD
       console.log(data);
       alert("Event created, check your Google Calendar!");
     });
+}
+
+export const handleMicrosoftLogin = async (instance) => {
+  await instance.loginPopup(loginRequest);
 }
 
 export async function googleSignIn(supabase) {
