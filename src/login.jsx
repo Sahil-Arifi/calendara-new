@@ -12,6 +12,7 @@ const SignIn = () => {
   const activeAccount = instance.getActiveAccount();
 
   useEffect(() => {
+    if(!activeAccount) return;
     instance.acquireTokenSilent({
       scopes: ['user.read'],
       account: instance.getActiveAccount() 
