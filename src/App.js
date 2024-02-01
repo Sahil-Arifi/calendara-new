@@ -32,30 +32,34 @@ function App() {
     }
   }, []);
 
-  useEffect(() => {
-    const googleAccessToken = localStorage.getItem("googleAccessToken")
-    if (googleAccessToken) {
-      setGoogleAccessToken(googleAccessToken)
-    }
-  }, []);
 
   useEffect(() => {
     if (microsoftAccessToken) {
       getAllOutlookEvents(microsoftAccessToken)
         .then(res => {
           setMicrosoftEvents(res);
+          console.log(res)
         })
     }
   }, [microsoftAccessToken]);
 
   useEffect(() => {
-    if (googleAccessToken) {
-      getAllGoogleEvents({googleAccessToken})
+    console.log("Google Access Token Updated:", googleAccessToken);
+  }, [googleAccessToken]);
+
+  useEffect(() => {
+    if (googleAccessToken !== "") {
+      getAllGoogleEvents(googleAccessToken)
         .then(res => {
-          setGoogleEvents(res)
+          setGoogleEvents(prevEvents => [...prevEvents, ...res]);
+          console.log(googleEvents);
         })
+        .catch(error => {
+          console.error('Error getting events:', error.response ? error.response.data : error.message);
+        });
     }
   }, [googleAccessToken]);
+  
 
  
 
@@ -141,7 +145,11 @@ function App() {
           />
           {isEditing ? <button onClick={() => handleEventUpdate(currentEventId)}>Update Changes</button> : null}
           <hr />
-          <button onClick={() => createGoogleEvent({ session, start, end, eventName, eventDescription })}>
+          <button onClick={() => {
+              setGoogleAccessToken(session.provider_token)
+              console.log("provider token:" + session.provider_token)
+              createGoogleEvent({ session, start, end, eventName, eventDescription })
+          }}>
             Create Google Calendar Event
           </button>
           <button onClick={() => handleCreateEvent()}>

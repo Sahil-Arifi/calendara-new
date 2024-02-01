@@ -111,17 +111,18 @@ export async function createGoogleEvent({ session, start, end, eventName, eventD
     });
 }
 
-export const getAllGoogleEvents = async ({session}) => {
+export const getAllGoogleEvents = async (googleAccessToken) => {
   try {
     const apiUrl = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 
     const response = await axios.get(apiUrl, {
       headers: {
-        Authorization: `Bearer ${session.provider_token}`,
+        Authorization: `Bearer ${googleAccessToken}`,
       },
     });
+    console.log("getAllEvents Token: " + response)
 
-    return response.data.value;
+    return response.data.summary;
   } catch (error) {
     console.error('Error getting events:', error.response ? error.response.data : error.message);
   }
@@ -129,7 +130,7 @@ export const getAllGoogleEvents = async ({session}) => {
 
 export const deleteGoogleEvent = async ({session}, eventId) => {
   try {
-    const apiUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`;
+    const apiUrl = `https://www.googleapis.com/calendar/v3/calendars/${eventId}/events`;
 
     const response = await axios.delete(apiUrl, {
       headers: {
