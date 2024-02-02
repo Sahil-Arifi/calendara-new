@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useMsal } from '@azure/msal-react';
 import { googleSignOut, microsoftSignOut } from "./services";
 import {

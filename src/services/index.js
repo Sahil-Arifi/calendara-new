@@ -139,7 +139,7 @@ export const deleteGoogleEvent = async (googleAccessToken, eventId) => {
 };
 
 
-export const handleMicrosoftLogin = async (instance) => {
+export const microsoftSignIn = async (instance) => {
   await instance.loginPopup(loginRequest);
 }
 

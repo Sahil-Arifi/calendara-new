@@ -1,250 +1,270 @@
-import "./App.css";
-import {
-  useSession, 
-  useSessionContext,
-} from "@supabase/auth-helpers-react";
-import DateTimePicker from "react-datetime-picker";
-import 'react-datetime-picker/dist/DateTimePicker.css';
-import { useState, useEffect } from "react";
+import { useSession, useSessionContext } from "@supabase/auth-helpers-react";
 import SignIn from "./login";
-import { createGoogleEvent, createOutlookEvent, deleteGoogleEvent, deleteOutlookEvent, getAllGoogleEvents, getAllOutlookEvents, updateOutlookEvent } from "./services";
+import { getAllGoogleEvents, getAllOutlookEvents } from "./services";
 import SignOut from "./logout";
+import {
+  useRetrieveGoogleEvents,
+  useMicrosoftToken,
+  useRetrieveOutlookEvents,
+  useRetrieveGoogleEventsOnChange,
+} from "./services/useEffectHandler";
+import {
+  handleCreateEvent,
+  handleMicrosoftDeleteEvent,
+  handleGoogleDeleteEvent,
+  handleCreateGoogleEvent,
+  handleUpdateForm,
+  handleEventUpdate,
+  handleClick,
+} from "./services/handler.js";
+import { useAppState } from "./services/state";
+import DateTime from "./components/dateTime.component";
+import "./css/tailwind.css";
 
 function App() {
-  const [start, setStart] = useState(null);
-  const [end, setEnd] = useState(null);
-  const [eventName, setEventName] = useState("");
-  const [eventDescription, setEventDescription] = useState("");
-  const [microsoftAccessToken, setMicrosoftAccessToken] = useState("");
-  const [googleAccessToken, setGoogleAccessToken] = useState("");
-  const [microsoftEvents, setMicrosoftEvents] = useState([]);
-  const [googleEvents, setGoogleEvents] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentEventId, setCurrentEventId] = useState("");
-  // eslint-disable-next-line
-  const [forceUpdate, setForceUpdate] = useState(false);
-
-
-  const session = useSession(); // tokens, when session exists we have a user
+  // State
+  const {
+    start,
+    setStart,
+    end,
+    setEnd,
+    eventName,
+    setEventName,
+    eventDescription,
+    setEventDescription,
+    microsoftAccessToken,
+    setMicrosoftAccessToken,
+    googleAccessToken,
+    setGoogleAccessToken,
+    microsoftEvents,
+    setMicrosoftEvents,
+    googleEvents,
+    setGoogleEvents,
+    isEditing,
+    setIsEditing,
+    currentEventId,
+    setCurrentEventId,
+    setForceUpdate,
+  } = useAppState();
+  const session = useSession();
   const { isLoading } = useSessionContext();
 
-  useEffect(() => {
-    const microsoftAccessToken = localStorage.getItem("microsoftAccessToken")
-    if (microsoftAccessToken) {
-      setMicrosoftAccessToken(microsoftAccessToken)
-    }
-  }, []);
+  // useEffects
+  useMicrosoftToken(setMicrosoftAccessToken);
+  useRetrieveGoogleEvents(setGoogleEvents);
+  useRetrieveOutlookEvents(
+    getAllOutlookEvents,
+    microsoftAccessToken,
+    setMicrosoftEvents,
+  );
+  useRetrieveGoogleEventsOnChange(
+    googleAccessToken,
+    getAllGoogleEvents,
+    setGoogleEvents,
+  );
 
-  useEffect(() => {
-    // Retrieve Google events from local storage on component mount
-    const storedGoogleEvents = localStorage.getItem("googleEvents");
-    if (storedGoogleEvents) {
-      try {
-        const parsedEvents = JSON.parse(storedGoogleEvents);
-        setGoogleEvents(parsedEvents);
-      } catch (error) {
-        console.error("Error parsing stored Google events:", error);
-        // Handle the error as needed
-      }
-    } else {
-      setGoogleEvents([]);
-    }
-  }, []);
-  
-
-
-  useEffect(() => {
-    if (microsoftAccessToken) {
-      getAllOutlookEvents(microsoftAccessToken)
-        .then(res => {
-          setMicrosoftEvents(res);
-        })
-    }
-  }, [microsoftAccessToken]);
-
-  useEffect(() => {
-    if (googleAccessToken !== "") {
-      getAllGoogleEvents(googleAccessToken)
-        .then(res => {
-          setGoogleEvents(res);
-        })
-        .catch(error => {
-          console.log(error)
-        });
-    }
-  }, [googleAccessToken]);
-
- 
-  // useEffect to perform actions after state has been updated
-  useEffect(() => {
-  // Your code to execute after googleEvents state has been updated
-  console.log("Google Events updated:", googleEvents);
-  }, [googleEvents]); // Dependency array ensures the effect runs when googleEvents changes
-
-  const handleCreateEvent = async () => {
-    const newEvent = await createOutlookEvent(microsoftAccessToken, eventName, start, end);
-    setMicrosoftEvents([newEvent, ...microsoftEvents,]);
-  }
-
-
-  const handleMicrosoftDeleteEvent = async (eventId) => {
-    await deleteOutlookEvent(microsoftAccessToken, eventId);
-    // update the microsoftEvents state
-    setMicrosoftEvents(microsoftEvents.filter(event => event.id !== eventId));
-  }
-
-  const handleGoogleDeleteEvent = async (eventId) => {
-    try {
-      // Delete the event
-      await deleteGoogleEvent(googleAccessToken, eventId);
-  
-      // Update the local storage immediately
-      localStorage.setItem(
-        "googleEvents",
-        JSON.stringify(googleEvents.filter(event => event.id !== eventId))
-      );
-  
-      // Update the state to reflect the deletion
-      setGoogleEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
-    } catch (error) {
-      console.error("Error deleting Google event:", error);
-    }
+  // Handlers
+  const handleCreateEventWrapper = async () => {
+    await handleCreateEvent(
+      microsoftAccessToken,
+      eventName,
+      start,
+      end,
+      setMicrosoftEvents,
+      microsoftEvents,
+    );
   };
-  
-
-  const handleCreateGoogleEvent = async () => {
-    try {
-      // Create the event
-      await createGoogleEvent({ session, start, end, eventName, eventDescription });
-  
-      // Fetch the updated events immediately
-      const updatedGoogleEvents = await getAllGoogleEvents(googleAccessToken);
-  
-      // Update the local storage with the latest events
-      localStorage.setItem("googleEvents", JSON.stringify(updatedGoogleEvents));
-  
-      // Update the state to reflect the new events
-      setGoogleEvents(updatedGoogleEvents);
-  
-      // Clear the form input values
-      setStart(null);
-      setEnd(null);
-      setEventName("");
-      setEventDescription("");
-    } catch (error) {
-      console.error("Error creating Google event:", error);
-      // Handle error gracefully, show a message, etc.
-    }
+  const handleMicrosoftDeleteEventWrapper = async (eventId) => {
+    await handleMicrosoftDeleteEvent(
+      microsoftAccessToken,
+      eventId,
+      setMicrosoftEvents,
+      microsoftEvents,
+    );
   };
-  
-
-  const handleUpdateForm = (event) => {
-    setEventName(event.subject)
-    setStart(new Date(event.start.dateTime));
-    setEnd(new Date(event.end.dateTime));
-    setEventDescription(event.bodyPreview);
-    setCurrentEventId(event.id);
-    setIsEditing(true);
-  }
-
-  const handleEventUpdate = async (eventId) => {
-    const eventToUpdate = {
-      subject: eventName,
-      start: {
-        dateTime: start.toISOString(),
-        timeZone: "UTC"
-      },
-      end: {
-        dateTime: end.toISOString(),
-        timeZone: "UTC"
-      },
-    }
-    const response = await updateOutlookEvent(microsoftAccessToken, eventId, eventToUpdate);
-    setMicrosoftEvents(microsoftEvents.map(event => event.id === eventId ? response : event));
-    setIsEditing(false);
-    setCurrentEventId("");
-    setEventName("");
-    setStart('');
-    setEnd('');
-  }
-
-  const handleClick = () => {
-    // Toggle the state to force a re-render
-    setForceUpdate(prevState => !prevState);
+  const handleGoogleDeleteEventWrapper = async (eventId) => {
+    await handleGoogleDeleteEvent(
+      googleAccessToken,
+      eventId,
+      setGoogleEvents,
+      googleEvents,
+    );
   };
+  const handleCreateGoogleEventWrapper = async () => {
+    await handleCreateGoogleEvent(
+      session,
+      start,
+      end,
+      eventName,
+      eventDescription,
+      googleAccessToken,
+      setGoogleEvents,
+      setStart,
+      setEnd,
+      setEventName,
+      setEventDescription,
+    );
+  };
+  const handleUpdateFormWrapper = (event) => {
+    handleUpdateForm(
+      event,
+      setEventName,
+      setStart,
+      setEnd,
+      setEventDescription,
+      setCurrentEventId,
+      setIsEditing,
+    );
+  };
+  const handleEventUpdateWrapper = async (eventId) => {
+    await handleEventUpdate(
+      microsoftAccessToken,
+      eventId,
+      eventName,
+      start,
+      end,
+      setMicrosoftEvents,
+      microsoftEvents,
+      setIsEditing,
+      setCurrentEventId,
+      setEventName,
+      setStart,
+      setEnd,
+    );
+  };
+  const handleClickWrapper = () => {
+    handleClick(setForceUpdate);
+  };
+
+  function formatDateTime(dateTimeString) {
+    const options = {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    };
+    return new Date(dateTimeString).toLocaleString(undefined, options);
+  }
 
   if (isLoading) {
     return <>Loading...</>;
   }
 
   return (
-    <div className="App">
-      <div style={{ width: "400px", margin: "30px auto" }}>
-        <SignIn />
+    <div className="flex flex-col items-center justify-center min-h-screen w-full max-w-screen-xl mx-auto space-y-8">
+      {/* Login Section */}
+      <div className="bg-gray-100 p-4 rounded-md w-full flex justify-center">
+        <SignIn /> : 
+        <SignOut />
+      </div>
 
-        <>
-          {/* <h2>Hey there {session.user.email}</h2> */}
-          <h1>Start of your event</h1>
-          <DateTimePicker
-            onChange={setStart}
-            value={start}
-            style={{ width: "30px" }}
+      {/* Date Time Section */}
+      <div className="bg-gray-100 pl-24 rounded-md w-full pb-10 flex items-center justify-center gap-24">
+        <div>
+          <DateTime
+            setStart={setStart}
+            start={start}
+            setEnd={setEnd}
+            end={end}
+            eventName={eventName}
+            setEventName={setEventName}
+            eventDescription={eventDescription}
+            setEventDescription={setEventDescription}
           />
-          <p>End of your event</p>
-          <DateTimePicker
-            onChange={setEnd}
-            value={end}
-            style={{ width: "30px" }}
-          />
-          <p>Event name</p>
-          <input type="text" value={eventName} onChange={(e) => setEventName(e.target.value)} />
-          <p>Event description</p>
-          <input
-            type="text"
-            value={eventDescription}
-            onChange={(e) => setEventDescription(e.target.value)}
-          />
-          {isEditing ? <button onClick={() => handleEventUpdate(currentEventId)}>Update Changes</button> : ""}
-          <hr />
-          <button onClick={() => {
-              setGoogleAccessToken(session.provider_token)
-              handleCreateGoogleEvent({ session, start, end, eventName, eventDescription })
-              handleClick()
-          }}>
-            Create Google Calendar Event
-          </button>
-          <button onClick={() => handleCreateEvent()}>
+        </div>
+        <div className="flex gap-8 mt-8 flex-col">
+          <button
+            onClick={() => handleCreateEventWrapper()}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-4 rounded"
+          >
             Create Outlook Calendar Event
           </button>
-          {
-            microsoftEvents.map((event, index) => {
-              return (
-                <div key={index} onClick={() => handleUpdateForm(event)} style={{ border: '1px solid red', marginBottom: '10px', padding: '10px', cursor: 'pointer' }}>
-                  <p>{event?.subject}</p>
-                  <p>{event?.start.dateTime}</p>
-                  <p>{event?.end.dateTime}</p>
-                  <button onClick={() => handleMicrosoftDeleteEvent(event.id)}>Cancel</button>
+          <button
+            onClick={() => {
+              setGoogleAccessToken(session.provider_token);
+              handleCreateGoogleEventWrapper({
+                session,
+                start,
+                end,
+                eventName,
+                eventDescription,
+              });
+              handleClickWrapper();
+            }}
+            className="bg-green-500 text-white font-bold py-4 px-4 rounded hover:bg-green-600"
+          >
+            Create Google Calendar Event
+          </button>
+          <button
+            onClick={() => {
+              if (isEditing) {
+                handleEventUpdateWrapper(currentEventId);
+              } else {
+                alert("No event selected to edit!");
+              }
+            }}
+            className="bg-orange-500 text-white font-bold py-4 px-4 rounded hover:bg-orange-600"
+          >
+            Update Changes
+          </button>
+        </div>
+
+        <hr className="my-4 border-t border-gray-300" />
+      </div>
+      {/* Event Display Section */}
+      <div className="bg-gray-100 p-6 rounded-md w-full space-y-4 flex flex-col items-center justify-center">
+        <div className="flex flex-wrap margin">
+          {microsoftEvents &&
+            microsoftEvents.map((event, index) => (
+              <div
+                key={index}
+                onClick={() => handleUpdateFormWrapper(event)}
+                className="border border-gray-600 mb-4 p-6 rounded cursor-pointer hover:bg-blue-100 transition-all"
+              >
+                <div>
+                  <p className="font-bold mb-2">{event?.subject}</p>
+                  <p className="font-bold mb-2">From</p>
+                  <p>{formatDateTime(event?.start.dateTime)}</p>
+                  <p className="font-bold mb-2">To</p>
+                  <p>{formatDateTime(event?.end.dateTime)}</p>
                 </div>
-              )
-            })
-          }
-          {googleEvents ?
-            googleEvents.map((event, index) => {
-              return (
-                <div key={index} onClick={() => handleUpdateForm(event)} style={{ border: '1px solid blue', marginBottom: '10px', padding: '10px', cursor: 'pointer' }}>
-                  <p>{event?.summary}</p>
-                  <p>{event?.start.dateTime}</p>
-                  <p>{event?.end.dateTime}</p>
-                  <button onClick={() => handleGoogleDeleteEvent(event.id)}>Cancel</button>
+                <div>
+                  <button
+                    onClick={() => handleMicrosoftDeleteEventWrapper(event.id)}
+                    className="border border-gray-600 mt-5 py-1 px-2 rounded hover:bg-gray-700 hover:text-white transition-all"
+                  >
+                    Cancel
+                  </button>
                 </div>
-              )
-            }) : undefined
-          }
-          <SignOut />
-          </>
-        <div className="row">
-          <div className="column">
-          </div>
+              </div>
+            ))}
+
+          {googleEvents &&
+            googleEvents.map((event, index) => (
+              <div
+                key={index}
+                onClick={() => handleUpdateFormWrapper(event)}
+                className="border border-gray-600 mb-4 p-6 rounded cursor-pointer hover:bg-green-100 transition-all"
+              >
+                <div>
+                  <p className="font-bold mb-2">{event?.summary}</p>
+                  <p className="font-bold mb-2">From</p>
+                  <p>{formatDateTime(event?.start.dateTime)}</p>
+                  <p className="font-bold mb-2">To</p>
+                  <p>{formatDateTime(event?.end.dateTime)}</p>
+                </div>
+                <div>
+                  <button
+                    onClick={() => handleGoogleDeleteEventWrapper(event.id)}
+                    className="border border-gray-600 mt-5 py-1 px-2 rounded hover:bg-gray-700 hover:text-white transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     </div>
