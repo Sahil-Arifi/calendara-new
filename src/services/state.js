@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 export const useAppState = () => {
   const [start, setStart] = useState(null);
@@ -16,6 +16,8 @@ export const useAppState = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [googleUser, setGoogleUser] = useState([]);
   const [outlookUser, setOutlookUser] = useState([]);
+  const [isGoogle, setIsGoogle] = useState(false);
+  const [isOutlook, setIsOutlook] = useState(false);
 
   return {
     start,
@@ -48,5 +50,9 @@ export const useAppState = () => {
     setGoogleUser,
     outlookUser,
     setOutlookUser,
+    isGoogle,
+    setIsOutlook,
+    isOutlook,
+    setIsGoogle,
   };
 };

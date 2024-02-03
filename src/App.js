@@ -1,20 +1,22 @@
 import { useSession, useSessionContext } from "@supabase/auth-helpers-react";
 import SignIn from "./login";
 import { getAllGoogleEvents, getAllOutlookEvents } from "./services";
-import SignOut from "./logout";
 import {
   useRetrieveGoogleEvents,
   useMicrosoftToken,
   useRetrieveOutlookEvents,
   useRetrieveGoogleEventsOnChange,
+  useGoogleAccessToken,
 } from "./services/useEffectHandler";
 import {
   handleCreateEvent,
   handleMicrosoftDeleteEvent,
   handleGoogleDeleteEvent,
   handleCreateGoogleEvent,
-  handleUpdateForm,
-  handleEventUpdate,
+  handleOutlookUpdateForm,
+  handleGoogleEventUpdate,
+  handleGoogleUpdateForm,
+  handleOutlookEventUpdate,
   handleClick,
 } from "./services/handler.js";
 import { useAppState } from "./services/state";
@@ -45,12 +47,17 @@ function App() {
     currentEventId,
     setCurrentEventId,
     setForceUpdate,
+    isGoogle,
+    setIsGoogle,
+    setIsOutlook,
+    outlookUser
   } = useAppState();
   const session = useSession();
   const { isLoading } = useSessionContext();
 
   // useEffects
   useMicrosoftToken(setMicrosoftAccessToken);
+  useGoogleAccessToken(setGoogleAccessToken);
   useRetrieveGoogleEvents(setGoogleEvents);
   useRetrieveOutlookEvents(
     getAllOutlookEvents,
@@ -80,6 +87,10 @@ function App() {
       eventId,
       setMicrosoftEvents,
       microsoftEvents,
+      setStart,
+      setEnd,
+      setEventName,
+      setEventDescription
     );
   };
   const handleGoogleDeleteEventWrapper = async (eventId) => {
@@ -88,11 +99,14 @@ function App() {
       eventId,
       setGoogleEvents,
       googleEvents,
+      setStart,
+      setEnd,
+      setEventName,
+      setEventDescription
     );
   };
   const handleCreateGoogleEventWrapper = async () => {
     await handleCreateGoogleEvent(
-      session,
       start,
       end,
       eventName,
@@ -105,8 +119,26 @@ function App() {
       setEventDescription,
     );
   };
-  const handleUpdateFormWrapper = (event) => {
-    handleUpdateForm(
+  const handleGoogleUpdateEventWrapper = (eventId) => {
+    handleGoogleEventUpdate(
+      googleAccessToken,
+      eventId,
+      eventName,
+      eventDescription,
+      start,
+      end,
+      setGoogleEvents,
+      googleEvents,
+      setIsEditing,
+      setCurrentEventId,
+      setEventName,
+      setEventDescription,
+      setStart,
+      setEnd,
+    );
+  };
+  const handleGoogleUpdateFormWrapper = (event) => {
+    handleGoogleUpdateForm(
       event,
       setEventName,
       setStart,
@@ -116,8 +148,19 @@ function App() {
       setIsEditing,
     );
   };
-  const handleEventUpdateWrapper = async (eventId) => {
-    await handleEventUpdate(
+  const handleOutlookUpdateFormWrapper = (event) => {
+    handleOutlookUpdateForm(
+      event,
+      setEventName,
+      setStart,
+      setEnd,
+      setEventDescription,
+      setCurrentEventId,
+      setIsEditing,
+    );
+  };
+  const handleOutlookUpdateEventWrapper = async (eventId) => {
+    await handleOutlookEventUpdate(
       microsoftAccessToken,
       eventId,
       eventName,
@@ -156,8 +199,7 @@ function App() {
     <div className="flex flex-col items-center justify-center min-h-screen w-full max-w-screen-xl mx-auto space-y-8">
       {/* Login Section */}
       <div className="bg-gray-100 p-4 rounded-md w-full flex justify-center">
-        <SignIn /> : 
-        <SignOut />
+        <SignIn />
       </div>
 
       {/* Date Time Section */}
@@ -177,7 +219,7 @@ function App() {
         <div className="flex gap-8 mt-8 flex-col">
           <button
             onClick={() => handleCreateEventWrapper()}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-4 rounded"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-4 rounded transition-all"
           >
             Create Outlook Calendar Event
           </button>
@@ -193,19 +235,21 @@ function App() {
               });
               handleClickWrapper();
             }}
-            className="bg-green-500 text-white font-bold py-4 px-4 rounded hover:bg-green-600"
+            className="bg-green-500 text-white font-bold py-4 px-4 rounded hover:bg-green-600 transition-all"
           >
             Create Google Calendar Event
           </button>
           <button
             onClick={() => {
               if (isEditing) {
-                handleEventUpdateWrapper(currentEventId);
+                isGoogle
+                  ? handleGoogleUpdateEventWrapper(currentEventId)
+                  : handleOutlookUpdateEventWrapper(currentEventId);
               } else {
                 alert("No event selected to edit!");
               }
             }}
-            className="bg-orange-500 text-white font-bold py-4 px-4 rounded hover:bg-orange-600"
+            className="bg-orange-500 text-white font-bold py-4 px-4 rounded hover:bg-orange-600 transition-all"
           >
             Update Changes
           </button>
@@ -213,15 +257,21 @@ function App() {
 
         <hr className="my-4 border-t border-gray-300" />
       </div>
+
       {/* Event Display Section */}
       <div className="bg-gray-100 p-6 rounded-md w-full space-y-4 flex flex-col items-center justify-center">
-        <div className="flex flex-wrap margin">
-          {microsoftEvents &&
+        <div className="flex flex-wrap justify-center">
+          { outlookUser !== [] ?
+            microsoftEvents &&
             microsoftEvents.map((event, index) => (
               <div
                 key={index}
-                onClick={() => handleUpdateFormWrapper(event)}
-                className="border border-gray-600 mb-4 p-6 rounded cursor-pointer hover:bg-blue-100 transition-all"
+                onClick={() => {
+                  handleOutlookUpdateFormWrapper(event);
+                  setIsGoogle(false);
+                  setIsOutlook(true);
+                }}
+                className="border border-gray-600 mb-4 p-6 rounded cursor-pointer hover:bg-blue-100 transition-all m-10"
               >
                 <div>
                   <p className="font-bold mb-2">{event?.subject}</p>
@@ -239,17 +289,21 @@ function App() {
                   </button>
                 </div>
               </div>
-            ))}
-
+            )) : null
+          }
           {googleEvents &&
             googleEvents.map((event, index) => (
               <div
                 key={index}
-                onClick={() => handleUpdateFormWrapper(event)}
-                className="border border-gray-600 mb-4 p-6 rounded cursor-pointer hover:bg-green-100 transition-all"
+                onClick={() => {
+                  handleGoogleUpdateFormWrapper(event);
+                  setIsGoogle(true);
+                  setIsOutlook(false);
+                }}
+                className="border border-gray-600 mb-4 p-6 rounded cursor-pointer hover:bg-green-100 transition-all m-10"
               >
                 <div>
-                  <p className="font-bold mb-2">{event?.summary}</p>
+                  <p className="font-bold mb-2">{event?.summary}: {event?.description}</p>
                   <p className="font-bold mb-2">From</p>
                   <p>{formatDateTime(event?.start.dateTime)}</p>
                   <p className="font-bold mb-2">To</p>
